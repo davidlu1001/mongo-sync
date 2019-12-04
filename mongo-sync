@@ -109,11 +109,14 @@ function load_configs {
     # Loads:
     # - $local_db
     # - $local_host_port
+    # - $local_host_prefix
     # - $local_access_username
     # - $local_access_password
     # - $remote_db
+    # - $remote_db_new
     # - $remote_host_url
     # - $remote_host_port
+    # - $remote_host_prefix
     # - $remote_access_username
     # - $remote_access_password
     # - $tunnel_on
@@ -177,17 +180,14 @@ function pull {
 
     echo "Dumping Remote DB to $TMPDIR... "
     mongodump \
-        -h "$remote_host_url":"$remote_host_port" \
-        -d "$remote_db" \
-        $REMOTE_CREDENTIALS \
+        --uri=""$remote_host_prefix$remote_access_username:$remote_access_password@$remote_host_url/$remote_db"" \
         -o "$TMPDIR" > /dev/null
     success_msg
 
     echo "Overwriting Local DB with Dump... "
     mongorestore \
-        --port "$local_host_port" \
-        -d "$local_db" \
-        $LOCAL_CREDENTIALS \
+        --uri=""$local_host_prefix$local_access_username:$local_access_password@$local_host_url:$local_host_port/$local_db?authSource=admin"" \
+        --db "$local_db" \
         "$TMPDIR"/"$remote_db" \
         --drop > /dev/null
     success_msg
@@ -215,18 +215,16 @@ function push {
 
     echo "Dumping Local DB to $TMPDIR... "
     mongodump \
-        --port "$local_host_port" \
-        -d "$local_db" \
-        $LOCAL_CREDENTIALS \
+        --uri=""$local_host_prefix$local_access_username:$local_access_password@$local_host_url:$local_host_port/$local_db?authSource=admin"" \
         -o "$TMPDIR" > /dev/null
     success_msg
 
     echo "Overwriting Remote DB with Dump... "
     mongorestore \
-        -h "$remote_host_url":"$remote_host_port" \
-        -d "$remote_db" \
-        $REMOTE_CREDENTIALS \
-        "$TMPDIR"/"$local_db" --drop > /dev/null
+        --uri=""$remote_host_prefix$remote_access_username:$remote_access_password@$remote_host_url:$remote_host_port/$remote_db"" \
+        --db "$remote_dbnew" \
+        "$TMPDIR"/"$remote_db" \
+        --drop > /dev/null
     success_msg
 
     if [ "$tunnel_on" == true ] ; then
